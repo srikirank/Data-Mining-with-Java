@@ -7,6 +7,7 @@ Utlities
 1. <b>Point</b> - Generic container has been created to represent an n-dimensional numeric data point. The same data point may contain multiple data types on different features so long as all the data are numeric. Attribute positions with null values can be recorded in the container. This information can be used to replace the missing features or identify if the point is a complete case.
 2. <b>Data</b> - Data are represented as collection of <i>'p'</i> n-dimensional points. Missing cases are recorded in the collection. Utilities to subset the data based on the number of the points and features have been written. Column-subsetting and row-subsetting implemented to make it flexible to deal with portions of the data points.
 3. <b>Distances</b> - A generic class containing utilities to compute distances between two n-dimensional points has been implemented. The following distances and similarities were implemented: Euclidean, Manhattan distance, Cosine similarity, Jaccard Coefficient. Adding a new distance metric is just as easy since they can be added independent of other functionalities.
+4. <b>CSV File reader</b> - A CSV file reader has been written which reads any text or csv file. Works for arbitrary field seperator, number of lines to be skipped and an optional header line containing column names. 
 
 Algorithms
 ---------------
