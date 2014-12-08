@@ -40,7 +40,7 @@ public class Point {
         this.numberOfFeatures = numberOfFeatures;
     }
 
-    protected Number getFeature(int index) {
+    public Number getFeature(int index) {
         return featureArray[index];
     }
 

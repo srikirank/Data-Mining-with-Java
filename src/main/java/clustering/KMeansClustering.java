@@ -1,10 +1,16 @@
 package clustering;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeSet;
 
 import dataStructures.Data;
@@ -35,8 +41,8 @@ public class KMeansClustering {
         this.costs = new ArrayList<Double>(numberOfIterations);
         Arrays.fill(partitionLabels, 0);
         this.centroids = new Point[k];
-        this.dm = new DistanceMeasure(DistanceType.EUCLIDEAN);
-        this.criterion = StoppingCriterion.FIXED_ITERATIONS;
+        this.dm = new DistanceMeasure(DistanceType.MANHATTAN);
+        this.criterion = StoppingCriterion.COST_OPTIMIZE;
     }
 
     public KMeansClustering(Data data, int k, StoppingCriterion criterion) {
@@ -120,15 +126,10 @@ public class KMeansClustering {
                     centroids[j] = data.meanOfPointsList(returnPartition(j));
             }
             prevClusters = currentClusters;
-            System.out.println(fractionChange);
         } while (fractionChange > 0.01);
         this.clusters = currentClusters;
         this.centroids = centroids;
         System.out.println("Converged in " + count + " iterations");
-    }
-
-    private double getCost(int i) {
-        return this.costs.get(i);
     }
 
     private void addCostFunction(Double cost) {
@@ -137,6 +138,9 @@ public class KMeansClustering {
 
     void kMeansCostOptimize() {
         Point[] centroids = new Point[k];
+        HashMap<Integer, Point[]> allCentroids = new HashMap<Integer, Point[]>();
+        HashMap<Integer, HashMap<Integer, TreeSet<Integer>>> allClusters =
+                        new HashMap<Integer, HashMap<Integer, TreeSet<Integer>>>();
 
         Double distance = 0.0;
         Double cost = 0.0;
@@ -168,7 +172,7 @@ public class KMeansClustering {
                     clusterSet.add(i);
                     currentClusters.put(clusterKey, clusterSet);
                 }
-                System.out.println("COST : " + cost);
+
                 fractionChange = kMeansFracChange(prevClusters, currentClusters);
                 for (int j = 0; j < this.k; j++) {
                     if (currentClusters.get(j).size() > 0)
@@ -176,18 +180,15 @@ public class KMeansClustering {
                 }
                 prevClusters = currentClusters;
             } while (fractionChange > 0.01);
-            System.out.println("Clusters for iteration " + (t + 1));
-            this.displayPartitions();
-            System.out.println();
+
+            allCentroids.put(t, centroids);
+            allClusters.put(t, currentClusters);
+
             this.addCostFunction(cost);
-            if (t == 0 || this.getCost(t - 1) > this.getCost(t)) {
-                this.clusters = currentClusters;
-                this.centroids = centroids;
-                System.out.println("--------------" + (t + 1));
-            }
         }
-        cost = Collections.min(this.costs);
-        // this.fixLabels();
+        int minCostIndex = this.costs.indexOf(Collections.min(this.costs));
+        this.clusters = allClusters.get(minCostIndex);
+        this.centroids = allCentroids.get(minCostIndex);
     }
 
     void kMeansFixedIterations() {
@@ -270,6 +271,9 @@ public class KMeansClustering {
         for (int i = 0; i < k; i++) {
             System.out.println("Cluster " + (i + 1) + ": " + this.clusters.get(i));
         }
+        System.out.println("\nThe accuracy for the dataset "
+                        + new BigDecimal(this.calculateAccuracy())
+                                        .setScale(2, RoundingMode.HALF_UP) + " %");
     }
 
     Double PPF(KMeansClustering c) {
@@ -310,5 +314,75 @@ public class KMeansClustering {
                 cluster.add(i);
         }
         return cluster;
+    }
+
+    // FIX THIS
+    // Assumes that the class label was ignored while processing and that the labels are integers.
+    private List<Integer> getLabels() {
+        List<Integer> classLabels = new ArrayList<Integer>();
+        int labelIndex = this.data.getNumberOfFeatures();
+        for (int i = 0; i < this.data.getNumberOfPoints(); i++) {
+            classLabels.add(this.data.getPoint(i).getFeature(labelIndex).intValue());
+        }
+        return classLabels;
+    }
+
+    public int findMajorityLabel(TreeSet<Integer> indexes) {
+        // Read the class labels file
+        List<Integer> labelsArray = getLabels();
+
+        Map<Integer, Integer> map = new HashMap<Integer, Integer>();
+
+        for (Integer indexValue : indexes) {
+            Integer count = map.get(labelsArray.get(indexValue));
+            map.put(labelsArray.get(indexValue), count != null ? count + 1 : 0);
+        }
+
+        Integer popular =
+                        Collections.max(map.entrySet(),
+                                        new Comparator<Map.Entry<Integer, Integer>>() {
+                                            public int compare(Entry<Integer, Integer> o1,
+                                                            Entry<Integer, Integer> o2) {
+                                                // TODO Auto-generated method stub
+                                                return o1.getValue().compareTo(o2.getValue());
+                                            }
+                                        }).getKey();
+
+        return (int) popular;
+    }
+
+    public int[] findLabel() {
+
+        int finalLabels[] = {0, 0, 0};
+
+        for (int i = 0; i < k; i++) {
+            finalLabels[i] = findMajorityLabel(this.clusters.get(i));
+
+        }
+        return finalLabels;
+    }
+
+
+    public double calculateAccuracy() {
+
+        // Find the majority labels
+        int trueLabels[] = findLabel();
+
+        int correctValues = 0;
+
+        // Read the class labels file
+        List<Integer> classLables = this.getLabels();
+
+        for (int i = 0; i < k; i++) {
+            TreeSet<Integer> label = this.clusters.get(i);
+            for (Integer labelValue : label) {
+                int index = (Integer) labelValue;
+                int value = classLables.get(index);
+                if (value == trueLabels[i])
+                    correctValues++;
+
+            }
+        }
+        return (double) correctValues / classLables.size() * 100;
     }
 }

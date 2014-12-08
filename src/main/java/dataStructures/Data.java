@@ -21,6 +21,10 @@ public class Data {
         this.featureNames = new ArrayList<String>(0);
     }
 
+    public int getNumberOfFeatures() {
+        return numberOfFeatures;
+    }
+
     Data(Data d) {
         this.numberOfPoints = d.numberOfPoints;
         this.numberOfFeatures = d.numberOfFeatures;
